@@ -16,10 +16,10 @@ type How struct {
 	Index int
 	How   string
 }
-type models struct {
+type Models struct {
 	Status     int
-	RecipeInfo []material
-	Material   recipe
+	RecipeInfo recipe
+	Material   []material
 	How        []How
 }
 
@@ -86,7 +86,8 @@ func GetRecipe() recipe {
 		Title:      "ポリポリ食感 きゅうりの佃煮　レシピ・作り方",
 		Info:       "ごはんを食べる箸が止まらなくなるかも！？しょっぱい味が癖になる、ポリポリ食感きゅうりの佃煮です。簡単に作れる上に、食べ方はお好みで無限大に広がります。大量のきゅうりの消費にもオススメですよ。ぜひ作ってみて下さいね。",
 		Serving:    4,
-		Imgae:      "C:/work/Go/rakushiru/image/food_sample.jpg",
+		// Imgae:      "C:/work/Go/rakushiru/image/food_sample.jpg",
+		Imgae: "../Go/rakushiru/image/food_sample.jpg",
 	}
 	return sample
 }
@@ -123,14 +124,14 @@ type sample struct {
 	Imgae      string
 }
 
-func GetModels() models {
+func GetModels() Models {
 
 	// 定義その1＆要素追加
-	var sample models
-	sample = models{
+	var sample Models
+	sample = Models{
 		Status:     200,
-		RecipeInfo: GetMaterial(),
-		Material:   GetRecipe(),
+		RecipeInfo: GetRecipe(),
+		Material:   GetMaterial(),
 		How:        GetHow(),
 	}
 

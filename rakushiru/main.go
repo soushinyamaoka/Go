@@ -10,13 +10,13 @@ import (
 
 // 構造を宣言
 type Request struct {
-	reqCode string `json:"name"`
-	data    int    `json:"age"`
+	ReqCode string `json:"reqCode"`
+	Data    string `json:"data"`
 }
 
 type Response struct {
 	Status int
-	Rssult RecipeModel.Models
+	Data   RecipeModel.Models
 }
 
 type EResponse struct {
@@ -32,6 +32,7 @@ func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
 	body, e := ioutil.ReadAll(r.Body)
+	fmt.Printf("%#v\n", string(body))
 	if e != nil {
 		fmt.Printf("ERROR1")
 		fmt.Println(e.Error())
@@ -40,20 +41,22 @@ func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
 	req := Request{}
 	e = json.Unmarshal(body, &req)
 	if e != nil {
-		fmt.Printf("ERROR2")
-		fmt.Println(e.Error())
+		fmt.Printf("%#v\n", "ERROR2")
+		fmt.Printf("%#v\n", e.Error())
+		fmt.Printf("%#v\n", string(body))
 		return
 	}
 
-	if req.reqCode == "RecipesInfoSelect" {
-		res, err := json.Marshal(RecipeModel.GetModels())
+	if req.ReqCode == "RecipesInfoSelect" {
+		res, err := json.Marshal(Response{0, RecipeModel.GetModels()})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		fmt.Printf("%#v\n", req)
-		fmt.Printf("%#v\n", req.reqCode)
+		fmt.Printf("%#v\n", req.ReqCode)
+		fmt.Printf("%#v\n", req.Data)
 		fmt.Println("OK")
 
 		w.Write(res)
@@ -65,7 +68,7 @@ func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fmt.Printf("%#v\n", req)
-		fmt.Printf("%#v\n", req.reqCode)
+		fmt.Printf("%#v\n", req.ReqCode)
 		fmt.Println("NG")
 
 		w.Write(res)
