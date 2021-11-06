@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	Const "rakushiru/src/Module/Const"
 	RecipeModel "rakushiru/src/Module/Model"
+	Service "rakushiru/src/Module/Service"
 )
 
 // 構造を宣言
 type Request struct {
-	ReqCode string `json:"reqCode"`
-	Data    string `json:"data"`
+	ReqCode string             `json:"reqCode"`
+	Data    RecipeModel.Models `json:"data"`
 }
 
 type Response struct {
@@ -23,8 +25,8 @@ type EResponse struct {
 	Status int
 }
 
-// 入力フォーム画面
-func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
+// レシピ入力画面
+func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("call")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
@@ -47,8 +49,27 @@ func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.ReqCode == "RecipesInfoSelect" {
-		res, err := json.Marshal(Response{0, RecipeModel.GetModels()})
+	fmt.Println("OK")
+	model := RecipeModel.Models{}
+	var res = Service.Result{}
+	fmt.Println(req.Data.Recipes[0].RecipeId)
+	model.Recipes = req.Data.Recipes
+	fmt.Println("OK2")
+
+	if req.ReqCode == Const.REQ_SAVE_RECIPE {
+		fmt.Println("CALL:SaveRecipe")
+		// レシピ保存処理
+		res = Service.SaveRecipe(model)
+	} else if req.ReqCode == Const.REQ_SEARCH_RECIPE {
+		// レシピ検索処理
+		fmt.Println("CALL:SearchRecipe")
+		res = Service.SearchRecipe(&model)
+	}
+
+	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Println(res.Message)
+	} else {
+		res, err := json.Marshal(Response{0, model})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -60,70 +81,110 @@ func HandlerUserForm(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("OK")
 
 		w.Write(res)
+	}
+}
+
+// レシピ入力画面
+func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("call")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+	body, e := ioutil.ReadAll(r.Body)
+	fmt.Printf("%#v\n", string(body))
+	if e != nil {
+		fmt.Printf("ERROR1")
+		fmt.Println(e.Error())
+		return
+	}
+	req := Request{}
+	e = json.Unmarshal(body, &req)
+	if e != nil {
+		fmt.Printf("%#v\n", "ERROR2")
+		fmt.Printf("%#v\n", e.Error())
+		fmt.Printf("%#v\n", string(body))
+		return
+	}
+
+	fmt.Println("OK")
+	model := RecipeModel.Models{}
+	var res = Service.Result{}
+	fmt.Println(req.Data.Recipes[0].RecipeId)
+	model.Recipes = req.Data.Recipes
+	fmt.Println("OK2")
+
+	fmt.Println("CALL:SaveRecipe")
+	// レシピ保存処理
+	res = Service.SaveRecipe(model)
+
+	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Println(res.Message)
 	} else {
-		res, err := json.Marshal(EResponse{http.StatusBadRequest})
+		res, err := json.Marshal(Response{0, model})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		fmt.Printf("%#v\n", req)
-		fmt.Printf("%#v\n", req.ReqCode)
-		fmt.Println("NG")
-
 		w.Write(res)
 	}
 }
 
-// 入力内容の確認画面
-func HandlerUserConfirm(w http.ResponseWriter, req *http.Request) {
-	// w.Header().Set("Access-Control-Allow-Headers", "*")
-	// w.Header().Set("Access-Control-Allow-Origin", "*")
-	// w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+// レシピ入力画面
+func HandlerRecipeMake(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("call")
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
-	// type Ping struct {
-	// 	Status int
-	// 	Rssult string
-	// }
+	body, e := ioutil.ReadAll(r.Body)
+	fmt.Printf("%#v\n", string(body))
+	if e != nil {
+		fmt.Printf("ERROR1")
+		fmt.Println(e.Error())
+		return
+	}
+	req := Request{}
+	e = json.Unmarshal(body, &req)
+	if e != nil {
+		fmt.Printf("%#v\n", "ERROR2")
+		fmt.Printf("%#v\n", e.Error())
+		fmt.Printf("%#v\n", string(body))
+		return
+	}
 
-	// ping := Ping{http.StatusOK, "ok"}
+	var res = Service.Result{}
+	var model = RecipeModel.Models{}
+	fmt.Println("CALL:SaveRecipe")
+	// レシピ作成前処理
+	res = Service.MakeRecipe(&model)
 
-	// res, err := json.Marshal(ping)
-
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// w.Header().Set("Content-Type", "application/json")
-	// fmt.Println(res)
-	// w.Write(res)
-
-	// // テンプレートをパースする
-	// tpl := template.Must(template.ParseFiles("templates/user-confirm.html"))
-
-	// // テンプレートに出力する値をマップにセット
-	// values := map[string]string{
-	// 	"account": req.FormValue("account"),
-	// 	"name":    req.FormValue("name"),
-	// 	"passwd":  req.FormValue("passwd"),
-	// }
-
-	// // マップを展開してテンプレートを出力する
-	// if err := tpl.ExecuteTemplate(w, "user-confirm.html", values); err != nil {
-	// 	fmt.Println(err)
-	// }
+	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Println(res.Message)
+	} else {
+		res, err := json.Marshal(Response{0, model})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(res)
+	}
 }
 
 func main() {
 	fmt.Println("main")
 
 	// "user-form"へのリクエストを関数で処理する
-	http.HandleFunc("/user-form", HandlerUserForm)
+	http.HandleFunc("/recipeInfo", HandlerRecipeInfo)
+	http.HandleFunc("/saveRecipe", HandlerRecipeSave)
+	http.HandleFunc("/makeRecipe", HandlerRecipeMake)
+	// model := RecipeModel.Models{}
+	// Service.SearchRecipe(&model)
 	fmt.Println("a")
+	// fmt.Println(model)
 
-	// "user-confirm"へのリクエストを関数で処理する
-	http.HandleFunc("/user-confirm", HandlerUserConfirm)
 	fmt.Println("b")
 
 	// サーバーを起動
