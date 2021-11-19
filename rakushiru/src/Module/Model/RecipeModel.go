@@ -1,27 +1,38 @@
 package Module
 
+import "time"
+
 type Recipes struct {
-	RecipeId     string `gorm:"recipe_id" json:"RecipeId, omitempty"`
-	Title        string `gorm:"title" json:'Title, omitempty"`
-	Introduction string `gorm:"introduction" json:'Introduction, omitempty"`
-	Serving      string `gorm:"serving" json:'Serving, omitempty"`
-	Image        string `gorm:"image" json:'Image, omitempty"`
-	// CreatedAt    string `gorm:"created_at" json:'CreatedAt'`
-	// UpdatedAt    string `gorm:"updated_at" json:'UpdatedAt'`
+	RecipeId     string    `gorm:"recipe_id" json:"RecipeId, omitempty"`
+	Title        string    `gorm:"title" json:'Title, omitempty"`
+	Introduction string    `gorm:"introduction" json:'Introduction, omitempty"`
+	Serving      string    `gorm:"serving" json:'Serving, omitempty"`
+	Image        string    `gorm:"image" json:'Image, omitempty"`
+	CreatedAt    time.Time `gorm:"created_at" json:'CreatedAt'`
+	UpdatedAt    time.Time `gorm:"updated_at" json:'UpdatedAt'`
 }
 
 type Ingredients struct {
-	RecipeId string `gorm:"recipe_id" json:"RecipeId, omitempty"`
-	OrderNo  int    `gorm:"order_no	" json:'OrderNo, omitempty"`
-	Name     string `gorm:"name	" json:'Name, omitempty"`
-	Quantity string `gorm:"quantity" json:'Quantity, omitempty"`
+	RecipeId  string    `gorm:"recipe_id" json:"RecipeId, omitempty"`
+	OrderNo   int       `gorm:"order_no	" json:'OrderNo, omitempty"`
+	Name      string    `gorm:"name	" json:'Name, omitempty"`
+	Quantity  string    `gorm:"quantity" json:'Quantity, omitempty"`
+	CreatedAt time.Time `gorm:"created_at" json:'CreatedAt'`
+	UpdatedAt time.Time `gorm:"updated_at" json:'UpdatedAt'`
 }
 
 type Instructions struct {
-	RecipeId string `gorm:"recipe_id" json:"RecipeId, omitempty"`
-	OrderNo  int    `gorm:"order_no	" json:'OrderNo, omitempty"`
-	Detail   string `gorm:"detail	" json:'Detail	, omitempty"`
+	RecipeId  string    `gorm:"recipe_id" json:"RecipeId, omitempty"`
+	OrderNo   int       `gorm:"order_no	" json:'OrderNo, omitempty"`
+	Detail    string    `gorm:"detail	" json:'Detail	, omitempty"`
+	CreatedAt time.Time `gorm:"created_at" json:'CreatedAt'`
+	UpdatedAt time.Time `gorm:"updated_at" json:'UpdatedAt'`
 }
+
+type KeyWord struct {
+	Word []string `json:"word"`
+}
+
 type Models struct {
 	Status       int
 	Recipes      []Recipes
