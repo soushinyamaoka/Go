@@ -29,8 +29,8 @@ type Instructions struct {
 	UpdatedAt time.Time `gorm:"updated_at" json:'UpdatedAt'`
 }
 
-type KeyWord struct {
-	Word []string `json:"word"`
+type Data struct {
+	Word string `json:"word"`
 }
 
 type Models struct {

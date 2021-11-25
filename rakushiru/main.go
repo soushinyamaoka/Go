@@ -5,17 +5,25 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	Const "rakushiru/src/Module/Const"
 	RecipeModel "rakushiru/src/Module/Model"
 	Module "rakushiru/src/Module/Service"
+	"strings"
 )
 
 // 構造を宣言
 type Request struct {
 	ReqCode string             `json:"reqCode"`
 	Data    RecipeModel.Models `json:"data"`
+}
+
+type HomeRequest struct {
+	ReqCode string             `json:"reqCode"`
+	Data    []RecipeModel.Data `json:"data"`
 }
 
 type Response struct {
@@ -57,18 +65,12 @@ func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
 	var res = Module.Result{}
 
 	fmt.Println(req.Data.Recipes[0].RecipeId)
-	model.Recipes = req.Data.Recipes
+	model = req.Data
 	fmt.Println("OK2")
 
-	if req.ReqCode == Const.REQ_SAVE_RECIPE {
-		fmt.Println("CALL:SaveRecipe")
-		// レシピ保存処理
-		res, _ = Module.SaveRecipe(model)
-	} else if req.ReqCode == Const.REQ_SEARCH_RECIPE {
-		// レシピ検索処理
-		fmt.Println("CALL:SearchRecipe")
-		// res, model = Module.SearchRecipe(model)
-	}
+	// レシピ検索処理
+	fmt.Println(model)
+	res, model = Module.OpenRecipeInfo(model)
 
 	if res.Status != Const.STATUS_SUCCESS {
 		fmt.Println(res.Message)
@@ -137,30 +139,43 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 }
 
 // レシピ入力画面
-func HandlerSearchHome(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("call: HandlerSearchHome")
+func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("call: HandlerOpenHome")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
-	req := Request{}
-	fmt.Println(r)
-	fmt.Println(req)
+	body, e := ioutil.ReadAll(r.Body)
+	fmt.Printf("%#v\n", string(body))
+	if e != nil {
+		fmt.Printf("ERROR1")
+		fmt.Println(e.Error())
+		return
+	}
+	req := HomeRequest{}
+	fmt.Println("body")
+	fmt.Println(body)
 
-	body := r.FormValue("Data")
-	json.Unmarshal([]byte(body), &req)
+	e = json.Unmarshal(body, &req)
+	if e != nil {
+		fmt.Printf("%#v\n", "ERROR2")
+		fmt.Printf("%#v\n", e.Error())
+		fmt.Printf("%#v\n", string(body))
+		return
+	}
 
-	model := req.Data
+	var model = RecipeModel.Models{}
 	var res = Module.Result{}
-	model.Recipes = req.Data.Recipes
+	keyModel := req.Data
 
 	// レシピ保存処理
-	var sample []string
-	sample = append(sample, "ラーメン")
-	sample = append(sample, "うどん")
+	// var sample []string
+	// sample = append(sample, "ラーメン")
+	// sample = append(sample, "うどん")
 	// string a := ["a", "b"]
-	Module.SearchRecipe(RecipeModel.KeyWord{sample})
+	fmt.Println(keyModel)
+	res, model = Module.SearchRecipe(keyModel)
 	// fmt.Println(a[0])
 	// model, res = Module.SearchHome(model)
 
@@ -228,61 +243,35 @@ const (
 )
 
 // 画像保存
-func HandlerImageSave(w http.ResponseWriter, r *http.Request) {
+func HandlerOpenImage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("saveImage")
 	// w.Header().Set("Content-Type", "multipart/form-data")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
-	//formから送信されたファイルを解析
-	// body, e := ioutil.ReadAll(r.Body)
-	// fmt.Printf("%#v\n", string(body))
-	file, fileHeader, err := r.FormFile("image")
-	body := r.FormValue("Data")
-	type Description struct {
-		Description string `gorm:"description" json:"description, omitempty"`
+	var Path = ""
+
+	sub := strings.TrimPrefix(r.URL.Path, "/image")
+	_, id := filepath.Split(sub)
+	if id != "" {
+		Path += "image/" + id
 	}
-	description := Description{}
-	json.Unmarshal([]byte(body), &description)
-	fmt.Println("descriptionです")
-	fmt.Println(description)
-	fmt.Println(description.Description)
-	fmt.Println(body)
-	fmt.Println("body")
+
+	img, err := os.Open(Path)
 	if err != nil {
-		fmt.Println("ファイルのアップロード失敗")
-		fmt.Println(err.Error())
-		// fmt.Println(e)
+		log.Fatal(err) // perhaps handle this nicer
 	}
-	//アップロードされたファイル名を取得
-	uploadedFileName := fileHeader.Filename
-	//アップロードされたファイルを置くパスを設定
-	imagePath := "image/" + uploadedFileName
+	defer img.Close()
+	w.Header().Set("Content-Type", "image/jpeg") // <-- set the content-type header
+	io.Copy(w, img)
 
-	//imagePathにアップロードされたファイルを保存
-	saveImage, err := os.Create(imagePath)
-
-	if err != nil {
-		fmt.Println("ファイルの確保失敗")
-	}
-
-	//保存用ファイルにアップロードされたファイルを書き込む
-	_, err = io.Copy(saveImage, file)
-	if err != nil {
-		fmt.Println("アップロードしたファイルの書き込み失敗")
-	}
-
-	//saveImageとfileを最後に閉じる
-	defer saveImage.Close()
-	defer file.Close()
-
-	res, err := json.Marshal(Response{0, RecipeModel.Models{}})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(res)
+	// res, err := json.Marshal(Response{0, RecipeModel.Models{}})
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+	// w.Write(res)
 }
 
 func main() {
@@ -292,17 +281,9 @@ func main() {
 	http.HandleFunc("/recipeInfo", HandlerRecipeInfo)
 	http.HandleFunc("/saveRecipe", HandlerRecipeSave)
 	http.HandleFunc("/makeRecipe", HandlerRecipeMake)
-	http.HandleFunc("/saveImage", HandlerImageSave)
-	// model := RecipeModel.Models{}
-	// Service.SearchRecipe(&model)
+	http.HandleFunc("/openHome", HandlerOpenHome)
+	http.HandleFunc("/image/", HandlerOpenImage)
 	fmt.Println("a")
-	// レシピ保存処理
-	var sample []string
-	sample = append(sample, "ラーメン")
-	sample = append(sample, "うどん")
-	// string a := ["a", "b"]
-	Module.SearchRecipe(RecipeModel.KeyWord{Word: sample})
-	// fmt.Println(model)
 
 	fmt.Println("b")
 

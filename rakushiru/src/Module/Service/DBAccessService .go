@@ -83,8 +83,14 @@ func exeSelRecipes(db *gorm.DB, whereModel RecipeModel.Models) (Result, RecipeMo
 
 	model := RecipeModel.Models{}
 	whereRecipes := whereModel.Recipes[0]
-	whereIngredients := whereModel.Instructions[0]
-	whereInstructions := whereModel.Ingredients[0]
+	whereInstructions := whereModel.Instructions[0]
+	whereIngredients := whereModel.Ingredients[0]
+	if len(whereIngredients.RecipeId) == 0 {
+		whereIngredients.RecipeId = whereRecipes.RecipeId
+	}
+	if len(whereInstructions.RecipeId) == 0 {
+		whereInstructions.RecipeId = whereRecipes.RecipeId
+	}
 
 	defer func() {
 		// SQL実行時エラーの場合
@@ -303,47 +309,6 @@ func exeInsInstructions(db *gorm.DB, model RecipeModel.Instructions) Result {
 	return res
 }
 
-// /*
-// INSERTを実行する
-// */
-// func exeInsertRecipe(db *gorm.DB, model *RecipeModel.Models) Result {
-
-// 	res := Result{}
-
-// 	defer func() {
-// 		// SQL実行時エラーの場合
-// 		if errResult := recover(); errResult != nil {
-// 			panic(errResult)
-// 		}
-// 	}()
-
-// 	// SQL実行
-// 	whereRecipes := Recipes{}
-// 	whereRecipes.RecipeId = model.Recipes[0].RecipeId
-// 	fmt.Println("INSERT:START")
-// 	// レシピ情報を更新
-// 	dbResult := db.Where(whereRecipes).Update(&model.Recipes)
-// 	if dbResult.Error != nil {
-// 		// DBエラーの場合
-// 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
-// 	}
-// 	// 材料情報を登録
-// 	dbResult = db.Create(model.Ingredients)
-// 	if dbResult.Error != nil {
-// 		// DBエラーの場合
-// 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
-// 	}
-// 	// 手順情報を登録
-// 	dbResult = db.Create(model.Instructions)
-// 	if dbResult.Error != nil {
-// 		// DBエラーの場合
-// 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
-// 	}
-// 	fmt.Println("INSERT:END")
-// 	fmt.Println("-----------------------------------")
-// 	return res
-// }
-
 /*
 レシピの更新をする
 */
@@ -513,7 +478,51 @@ func makeWhereRecipe(model RecipeModel.Models) Result {
 /*
 レシピの検索をする
 */
-func SearchRecipe(keyWord RecipeModel.KeyWord) (Result, RecipeModel.Models) {
+func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
+	fmt.Println("CALL OpenRecipeInfo")
+
+	var res = Result{}
+
+	// DB接続情報取得
+	conf, err := loadConfig()
+	if err != nil {
+		return Result{Const.STATUS_FILE_LOAD_ERROR, "", err}, model
+	}
+
+	// DBオープン
+	db, err := connectionDB(conf)
+	// DB接続に失敗した場合
+	if err != nil {
+		return Result{Const.STATUS_DB_ERROR, "", err}, model
+	}
+
+	defer func() {
+
+		// エラーが発生した場合
+		if err := recover(); err != nil {
+			res = err.(Result)
+			// エラーメッセージのセット
+			switch res.Status {
+			case Const.STATUS_FILE_LOAD_ERROR:
+				res.Message = Const.MSG_FILE_LOAD_ERROR
+			case Const.STATUS_DB_ERROR:
+				res.Message = Const.MSG_DB_ERROR
+			default:
+
+			}
+		}
+	}()
+
+	fmt.Println("検索開始")
+	res, model = exeSelRecipes(db, model)
+
+	return res, model
+}
+
+/*
+レシピの検索をする
+*/
+func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
 	fmt.Println("CALL SearchRecipe")
 
 	var res = Result{}
@@ -550,15 +559,22 @@ func SearchRecipe(keyWord RecipeModel.KeyWord) (Result, RecipeModel.Models) {
 	}()
 
 	fmt.Println("検索開始")
-	for i := 0; i < len(keyWord.Word); i++ {
+	var arr []RecipeModel.Recipes
+	for i, v := range keyWord {
+		fmt.Println(i, v)
+		fmt.Println(v)
 		where := Const.COL_TITLE + " LIKE ?"
-		key := "%" + keyWord.Word[i] + "%"
+		key := "%" + v.Word + "%"
 		// レシピ検索
-		res, model = exeSelRecipeByStr(db, where, key)
-		for n := 0; n < len(model.Recipes); n++ {
-			fmt.Println(model.Recipes[n].RecipeId)
+		var m = RecipeModel.Models{}
+		res, m = exeSelRecipeByStr(db, where, key)
+		for n, r := range m.Recipes {
+			fmt.Println(n, r)
+			arr = append(arr, r)
 		}
 	}
+
+	model.Recipes = arr
 
 	return res, model
 }
@@ -878,51 +894,6 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 	return res, model.Recipes[0].RecipeId
 
 }
-
-/*
-ホーム画面の表示項目を取得する
-*/
-// func SearchHome(whereModel RecipeModel.Models) (RecipeModel.Models, Result) {
-// 	fmt.Println("CALL:SearchHome")
-// 	var res Result = Result{}
-// 	model := RecipeModel.Models{}
-// 	// var model RecipeModel.Models
-
-// 	// DB接続情報取得
-// 	conf, err := loadConfig()
-// 	if err != nil {
-// 		return model, Result{Const.STATUS_FILE_LOAD_ERROR, "", err}
-// 	}
-
-// 	// DBオープン
-// 	db, err := connectionDB(conf)
-// 	// DB接続に失敗した場合
-// 	if err != nil {
-// 		return model, Result{Const.STATUS_DB_ERROR, "", err}
-// 	}
-
-// 	defer func() {
-
-// 		// エラーが発生した場合
-// 		if err := recover(); err != nil {
-// 			res = err.(Result)
-// 			// エラーメッセージのセット
-// 			switch res.Status {
-// 			case Const.STATUS_FILE_LOAD_ERROR:
-// 				res.Message = Const.MSG_FILE_LOAD_ERROR
-// 			case Const.STATUS_DB_ERROR:
-// 				res.Message = Const.MSG_DB_ERROR
-// 			default:
-
-// 			}
-// 		}
-// 	}()
-
-// 	// レシピ検索
-// 	res, model = exeSelectRecipes(db, whereModel)
-
-// 	return model, res
-// }
 
 /*
 レシピの登録をする
