@@ -79,28 +79,26 @@ func connectionDB(conf *config) (*gorm.DB, error) {
 /*
 SELECTを実行する
 */
-func exeSelRecipes(db *gorm.DB, whereModel RecipeModel.Models) (Result, RecipeModel.Models) {
+func exeSelRecipes(db *gorm.DB, recipeId string) (Result, RecipeModel.Models) {
+
+	fmt.Println("START:exeSelRecipes")
 
 	model := RecipeModel.Models{}
-	whereRecipes := whereModel.Recipes[0]
-	whereInstructions := whereModel.Instructions[0]
-	whereIngredients := whereModel.Ingredients[0]
-	if len(whereIngredients.RecipeId) == 0 {
-		whereIngredients.RecipeId = whereRecipes.RecipeId
-	}
-	if len(whereInstructions.RecipeId) == 0 {
-		whereInstructions.RecipeId = whereRecipes.RecipeId
-	}
+	// 検索条件のIDを設定
+	whereRecipes := Recipes{RecipeId: recipeId}
+	whereInstructions := Instructions{RecipeId: recipeId}
+	whereIngredients := Ingredients{RecipeId: recipeId}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("SELECT:START")
 	// レシピ情報を検索
 	dbResult := db.Where(whereRecipes).Find(&model.Recipes)
 	if dbResult.Error != nil {
@@ -121,8 +119,8 @@ func exeSelRecipes(db *gorm.DB, whereModel RecipeModel.Models) (Result, RecipeMo
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, model
 	}
-	fmt.Println("SELECT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeSelRecipes")
+
 	return Result{}, model
 }
 
@@ -130,18 +128,19 @@ func exeSelRecipes(db *gorm.DB, whereModel RecipeModel.Models) (Result, RecipeMo
 SELECTを実行する
 */
 func exeSelRecipeByStr(db *gorm.DB, where string, key string) (Result, RecipeModel.Models) {
-
+	fmt.Println("START:exeSelRecipeByStr")
 	model := RecipeModel.Models{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("SELECT:START")
 	// レシピ情報を検索
 	dbResult := db.Where(where, key).Find(&model.Recipes)
 	if dbResult.Error != nil {
@@ -149,8 +148,7 @@ func exeSelRecipeByStr(db *gorm.DB, where string, key string) (Result, RecipeMod
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, model
 	}
 
-	fmt.Println("SELECT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeSelRecipeByStr")
 	return Result{}, model
 }
 
@@ -158,51 +156,53 @@ func exeSelRecipeByStr(db *gorm.DB, where string, key string) (Result, RecipeMod
 SELECTを実行する
 */
 func exeCountIngredients(db *gorm.DB, where RecipeModel.Ingredients) (Result, int) {
+	fmt.Println("START:exeCountIngredients")
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
 	var count int
-	fmt.Println("IngredientsCOUNT:START")
 	dbResult := db.Model(&Ingredients{}).Where(where).Count(&count)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, -1
 	}
 
-	fmt.Println("COUNT:END")
+	fmt.Println("END:exeCountIngredients")
 	return Result{}, count
 }
 
 /*
 SELECTを実行する
 */
-func exeCountInstructions(db *gorm.DB, model RecipeModel.Instructions) (Result, int) {
+func exeCountInstructions(db *gorm.DB, where RecipeModel.Instructions) (Result, int) {
+	fmt.Println("START:exeCountInstructions")
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	whereInstructions := Instructions{RecipeId: model.RecipeId}
 	var count int
-	fmt.Println("InstructionsCOUNT:START")
-	dbResult := db.Model(&Instructions{}).Where(whereInstructions).Count(&count)
+	dbResult := db.Model(&Instructions{}).Where(where).Count(&count)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, -1
 	}
 
-	fmt.Println("COUNT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeCountInstructions")
 	return Result{}, count
 }
 
@@ -211,24 +211,26 @@ SELECTを実行する
 */
 func exeCheckExistRecipes(db *gorm.DB, where RecipeModel.Recipes) (Result, int) {
 
+	fmt.Println("START:exeCheckExistRecipes")
+
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
 	var count int
-	fmt.Println("RecipesCOUNT:START")
 	dbResult := db.Model(&Recipes{}).Where(where).Count(&count)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, -1
 	}
 
-	fmt.Println("COUNT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeCheckExistRecipes")
 	return Result{}, count
 }
 
@@ -236,26 +238,25 @@ func exeCheckExistRecipes(db *gorm.DB, where RecipeModel.Recipes) (Result, int) 
 INSERTを実行する
 */
 func exeInsRecipe(db *gorm.DB, model RecipeModel.Recipes) Result {
-
+	fmt.Println("START:exeInsRecipe")
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("RecipesINSERT:START")
-	fmt.Println(model)
 	dbResult := db.Create(model)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("INSERT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeInsRecipe")
 	return res
 }
 
@@ -263,23 +264,23 @@ func exeInsRecipe(db *gorm.DB, model RecipeModel.Recipes) Result {
 材料のINSERTを実行する
 */
 func exeInsIngredients(db *gorm.DB, model RecipeModel.Ingredients) Result {
-
+	fmt.Println("START:exeInsIngredients")
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("IngredientsINSERT:START")
 	dbResult := db.Create(model)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("INSERT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeInsIngredients")
 	return Result{}
 }
 
@@ -287,25 +288,27 @@ func exeInsIngredients(db *gorm.DB, model RecipeModel.Ingredients) Result {
 材料のINSERTを実行する
 */
 func exeInsInstructions(db *gorm.DB, model RecipeModel.Instructions) Result {
+	fmt.Println("START:exeInsInstructions")
+	fmt.Println(model)
 
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("INSERT:START")
 	dbResult := db.Create(model)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("INSERT:END")
-	fmt.Println("-----------------------------------")
+	fmt.Println("END:exeInsInstructions")
 	return res
 }
 
@@ -313,28 +316,28 @@ func exeInsInstructions(db *gorm.DB, model RecipeModel.Instructions) Result {
 レシピの更新をする
 */
 func exeUpdateRecipe(db *gorm.DB, Recipes RecipeModel.Recipes, where RecipeModel.Recipes) Result {
+	fmt.Println("END:exeUpdateRecipe")
 
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("RecipeUPDATE:START")
-	fmt.Println(Recipes)
-	fmt.Println(where)
 	dbResult := db.Model(&RecipeModel.Recipes{}).Where(where).Update(&Recipes)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("UPDATE:END")
 	res.Status = Const.STATUS_SUCCESS
 
+	fmt.Println("END:exeUpdateRecipe")
 	return res
 
 }
@@ -343,27 +346,26 @@ func exeUpdateRecipe(db *gorm.DB, Recipes RecipeModel.Recipes, where RecipeModel
 材料の更新をする
 */
 func exeUpdIngredients(db *gorm.DB, Ingredients RecipeModel.Ingredients, where RecipeModel.Ingredients) Result {
-
+	fmt.Println("START:exeUpdIngredients")
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("Ingredients UPDATE:START")
-	fmt.Println(Ingredients)
-	fmt.Println(where)
 	dbResult := db.Model(&RecipeModel.Ingredients{}).Where(where).Update(&Ingredients)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("UPDATE:END")
 	res.Status = Const.STATUS_SUCCESS
+	fmt.Println("END:exeUpdIngredients")
 
 	return res
 
@@ -373,26 +375,26 @@ func exeUpdIngredients(db *gorm.DB, Ingredients RecipeModel.Ingredients, where R
 手順の更新をする
 */
 func exeUpdInstructions(db *gorm.DB, Instructions RecipeModel.Instructions, where RecipeModel.Instructions) Result {
-
+	fmt.Println("START:exeUpdInstructions")
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("UPDATE:START")
 	dbResult := db.Model(&RecipeModel.Instructions{}).Where(where).Update(&Instructions)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("UPDATE:END")
 	res.Status = Const.STATUS_SUCCESS
-
+	fmt.Println("END:exeUpdInstructions")
 	return res
 
 }
@@ -400,29 +402,31 @@ func exeUpdInstructions(db *gorm.DB, Instructions RecipeModel.Instructions, wher
 /*
 材料の削除をする
 */
-func exeDelIngredients(db *gorm.DB, Ingredients RecipeModel.Ingredients, where RecipeModel.Ingredients) Result {
+func exeDelIngredients(db *gorm.DB, where RecipeModel.Ingredients) Result {
+	fmt.Println("START:exeDelIngredients")
 
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
+	Ingredients := RecipeModel.Ingredients{}
+
 	// SQL実行
-	fmt.Println("Ingredients Delete:START")
-	fmt.Println(Ingredients)
-	fmt.Println(where)
 	dbResult := db.Model(&RecipeModel.Ingredients{}).Where(where).Delete(&Ingredients)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("Delete:END")
 	res.Status = Const.STATUS_SUCCESS
 
+	fmt.Println("END:exeDelIngredients")
 	return res
 
 }
@@ -430,27 +434,29 @@ func exeDelIngredients(db *gorm.DB, Ingredients RecipeModel.Ingredients, where R
 /*
 手順の更新をする
 */
-func exeDelInstructions(db *gorm.DB, Instructions RecipeModel.Instructions, where RecipeModel.Instructions) Result {
-
+func exeDelInstructions(db *gorm.DB, where RecipeModel.Instructions) Result {
+	fmt.Println("START:exeDelInstructions")
 	res := Result{}
 
 	defer func() {
 		// SQL実行時エラーの場合
 		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
 			db.Close()
 		}
 	}()
 
 	// SQL実行
-	fmt.Println("InstructionsDelete:START")
+	Instructions := RecipeModel.Instructions{}
 	dbResult := db.Model(&RecipeModel.Instructions{}).Where(where).Delete(&Instructions)
 	if dbResult.Error != nil {
 		// DBエラーの場合
 		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}
 	}
-	fmt.Println("Delete:END")
 	res.Status = Const.STATUS_SUCCESS
 
+	fmt.Println("END:exeDelInstructions")
 	return res
 
 }
@@ -459,6 +465,7 @@ func exeDelInstructions(db *gorm.DB, Instructions RecipeModel.Instructions, wher
 レシピの更新をする
 */
 func makeWhereRecipe(model RecipeModel.Models) Result {
+	fmt.Println("END:makeWhereRecipe")
 
 	res := Result{}
 
@@ -471,6 +478,7 @@ func makeWhereRecipe(model RecipeModel.Models) Result {
 	whereInstructions.RecipeId = model.Recipes[0].RecipeId
 	res.Status = Const.STATUS_SUCCESS
 
+	fmt.Println("END:makeWhereRecipe")
 	return res
 
 }
@@ -479,7 +487,7 @@ func makeWhereRecipe(model RecipeModel.Models) Result {
 レシピの検索をする
 */
 func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
-	fmt.Println("CALL OpenRecipeInfo")
+	fmt.Println("START:OpenRecipeInfo")
 
 	var res = Result{}
 
@@ -513,8 +521,8 @@ func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
 		}
 	}()
 
-	fmt.Println("検索開始")
-	res, model = exeSelRecipes(db, model)
+	res, model = exeSelRecipes(db, model.Recipes[0].RecipeId)
+	fmt.Println("END:OpenRecipeInfo")
 
 	return res, model
 }
@@ -523,7 +531,7 @@ func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
 レシピの検索をする
 */
 func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
-	fmt.Println("CALL SearchRecipe")
+	fmt.Println("START:SearchRecipe")
 
 	var res = Result{}
 	model := RecipeModel.Models{}
@@ -575,6 +583,7 @@ func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
 	}
 
 	model.Recipes = arr
+	fmt.Println("END:SearchRecipe")
 
 	return res, model
 }
@@ -583,6 +592,7 @@ func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
 レシピの検索をする
 */
 func CheckExistRecipe(model *RecipeModel.Models) Result {
+	fmt.Println("START:CheckExistRecipe")
 
 	var res = Result{}
 	var count = 0
@@ -625,6 +635,7 @@ func CheckExistRecipe(model *RecipeModel.Models) Result {
 		res.Status = Const.STATUS_DATA_FIND
 	}
 
+	fmt.Println("END:CheckExistRecipe")
 	return res
 }
 
@@ -632,6 +643,7 @@ func CheckExistRecipe(model *RecipeModel.Models) Result {
 材料の登録件数を取得する
 */
 func getCountIngredients(model RecipeModel.Models) (Result, int) {
+	fmt.Println("END:getCountIngredients")
 
 	var res = Result{}
 	var count int = 0
@@ -669,6 +681,8 @@ func getCountIngredients(model RecipeModel.Models) (Result, int) {
 	// レシピ検索
 	res, count = exeCountIngredients(db, RecipeModel.Ingredients{RecipeId: model.Ingredients[0].RecipeId})
 
+	fmt.Println("START:getCountIngredients")
+
 	return res, count
 }
 
@@ -676,6 +690,7 @@ func getCountIngredients(model RecipeModel.Models) (Result, int) {
 手順の登録件数を取得する
 */
 func getCountInstructions(model RecipeModel.Models) (Result, int) {
+	fmt.Println("START:getCountInstructions")
 
 	var res = Result{}
 	var count int = 0
@@ -712,6 +727,7 @@ func getCountInstructions(model RecipeModel.Models) (Result, int) {
 	// レシピ検索
 	res, count = exeCountInstructions(db, model.Instructions[0])
 
+	fmt.Println("END:getCountInstructions")
 	return res, count
 }
 
@@ -719,6 +735,7 @@ func getCountInstructions(model RecipeModel.Models) (Result, int) {
 レシピの登録をする
 */
 func SaveRecipe(model RecipeModel.Models) (Result, string) {
+	fmt.Println("START:SaveRecipe")
 
 	var res Result = Result{}
 	var isNew bool = false
@@ -744,10 +761,11 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 	tx := db.Begin()
 
 	defer func() {
+		fmt.Println("でぃふぁー")
 
 		// エラーが発生した場合
 		if err := recover(); err != nil {
-			fmt.Println("エラー")
+			fmt.Println("エラーリカバー：ロールバック")
 			fmt.Println(err)
 			fmt.Println(db)
 			tx.Rollback()
@@ -764,13 +782,33 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 				res.Status = Const.STATUS_UNEXPECTED
 				res.Message = Const.MSG_UNEXPECTED_ERROR
 			}
+		} else if res.Status != Const.STATUS_SUCCESS {
+			fmt.Println("エラー：ロールバック")
+			tx.Rollback()
+			// エラーメッセージのセット
+			switch res.Status {
+			case Const.STATUS_FILE_LOAD_ERROR:
+				res.Message = Const.MSG_FILE_LOAD_ERROR
+			case Const.STATUS_DB_ERROR:
+				res.Message = Const.MSG_DB_ERROR
+			case Const.STATUS_UNEXPECTED:
+				res.Message = Const.MSG_UNEXPECTED_ERROR
+			default:
+				res.Status = Const.STATUS_UNEXPECTED
+				res.Message = Const.MSG_UNEXPECTED_ERROR
+			}
 		}
 		// DBクローズ
+		fmt.Println("トランザクションクローズ")
 		tx.Close()
 	}()
 
 	// レシピIDを生成
-	model, res = MakeRecipe(model)
+	if isNew {
+		model, res = MakeRecipe(model)
+	} else {
+		model = setInitValue(model, "")
+	}
 
 	if res.Err != nil {
 		return Result{Const.STATUS_DB_ERROR, "", err}, ""
@@ -807,7 +845,7 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 	// 材料データ更新
 	for i := 0; i < updateCount; i++ {
 		// 更新条件を設定
-		where := RecipeModel.Ingredients{RecipeId: model.Recipes[0].RecipeId, OrderNo: i}
+		where := RecipeModel.Ingredients{RecipeId: model.Recipes[0].RecipeId, OrderNo: i + 1}
 
 		// DB更新
 		if saveCount >= i {
@@ -816,7 +854,14 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 			res, ingCount = exeCountIngredients(tx, where)
 			if ingCount > 0 {
 				// データが存在する場合、UPDATEする
-				res = exeUpdIngredients(tx, model.Ingredients[i], where)
+				if saveCount > i {
+					// 更新の場合
+					res = exeUpdIngredients(tx, model.Ingredients[i], where)
+				} else {
+					// 削除の場合
+					// res = exeDelIngredients(tx, model.Ingredients[i], where)
+					res = exeDelIngredients(tx, where)
+				}
 				if res.Err != nil {
 					return Result{Const.STATUS_DB_ERROR, "", err}, ""
 				}
@@ -855,7 +900,7 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 	// 材料データ更新
 	for i := 0; i < updateCount; i++ {
 		// 更新条件を設定
-		where := RecipeModel.Instructions{RecipeId: model.Recipes[0].RecipeId, OrderNo: i}
+		where := RecipeModel.Instructions{RecipeId: model.Recipes[0].RecipeId, OrderNo: i + 1}
 
 		// DB更新
 		if saveCount >= i {
@@ -864,7 +909,13 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 			res, ingCount = exeCountInstructions(tx, where)
 			if ingCount > 0 {
 				// データが存在する場合、UPDATEする
-				res = exeUpdInstructions(tx, model.Instructions[i], where)
+				if saveCount > i {
+					// 更新の場合
+					res = exeUpdInstructions(tx, model.Instructions[i], where)
+				} else {
+					// 削除の場合
+					res = exeDelInstructions(tx, where)
+				}
 				if res.Err != nil {
 					return Result{Const.STATUS_DB_ERROR, "", err}, ""
 				}
@@ -890,6 +941,7 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 	fmt.Println("トランザクションを終了します")
 
 	res.Status = Const.STATUS_SUCCESS
+	fmt.Println("END:SaveRecipe")
 
 	return res, model.Recipes[0].RecipeId
 
@@ -899,6 +951,7 @@ func SaveRecipe(model RecipeModel.Models) (Result, string) {
 レシピの登録をする
 */
 func MakeRecipe(model RecipeModel.Models) (RecipeModel.Models, Result) {
+	fmt.Println("START:MakeRecipe")
 
 	var res = Result{}
 	var recipeId string = ""
@@ -953,6 +1006,7 @@ func MakeRecipe(model RecipeModel.Models) (RecipeModel.Models, Result) {
 	if len(recipeId) > 0 {
 		model = setInitValue(model, recipeId)
 	}
+	fmt.Println("END:MakeRecipe")
 
 	return model, res
 
@@ -962,6 +1016,7 @@ func MakeRecipe(model RecipeModel.Models) (RecipeModel.Models, Result) {
 レシピの登録をする
 */
 func setInitValue(model RecipeModel.Models, recipeId string) RecipeModel.Models {
+	fmt.Println("START:setInitValue")
 
 	// 現在時刻取得
 	var nowTime time.Time = time.Now()
@@ -975,17 +1030,25 @@ func setInitValue(model RecipeModel.Models, recipeId string) RecipeModel.Models 
 		model.Recipes[0].UpdatedAt = nowTime
 
 		// 材料情報
-		for i := 0; i < len(model.Ingredients); i++ {
-			model.Ingredients[i].RecipeId = recipeId
-			model.Ingredients[i].CreatedAt = nowTime
-			model.Ingredients[i].UpdatedAt = nowTime
+		if len(model.Ingredients) > 0 {
+			for i := 0; i < len(model.Ingredients); i++ {
+				model.Ingredients[i].RecipeId = recipeId
+				model.Ingredients[i].CreatedAt = nowTime
+				model.Ingredients[i].UpdatedAt = nowTime
+			}
+		} else {
+			fmt.Println("材料情報はありません")
 		}
 
 		// 手順情報
-		for i := 0; i < len(model.Instructions); i++ {
-			model.Instructions[i].RecipeId = recipeId
-			model.Instructions[i].CreatedAt = nowTime
-			model.Instructions[i].UpdatedAt = nowTime
+		if len(model.Instructions) > 0 {
+			for i := 0; i < len(model.Instructions); i++ {
+				model.Instructions[i].RecipeId = recipeId
+				model.Instructions[i].CreatedAt = nowTime
+				model.Instructions[i].UpdatedAt = nowTime
+			}
+		} else {
+			fmt.Println("手順情報はありません")
 		}
 
 	} else {
@@ -996,15 +1059,24 @@ func setInitValue(model RecipeModel.Models, recipeId string) RecipeModel.Models 
 
 		// 材料情報
 		for i := 0; i < len(model.Ingredients); i++ {
+			if model.Ingredients[i].CreatedAt.IsZero() {
+				fmt.Println("0です")
+				model.Ingredients[i].CreatedAt = nowTime
+			}
 			model.Ingredients[i].UpdatedAt = nowTime
 		}
 
 		// 手順情報
 		for i := 0; i < len(model.Instructions); i++ {
+			if model.Instructions[i].CreatedAt.IsZero() {
+				fmt.Println("0です")
+				model.Instructions[i].CreatedAt = nowTime
+			}
 			model.Instructions[i].UpdatedAt = nowTime
 		}
 	}
 
+	fmt.Println("END:setInitValue")
 	return model
 
 }

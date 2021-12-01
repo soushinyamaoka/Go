@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,7 +36,7 @@ type EResponse struct {
 
 // レシピ入力画面
 func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("call")
+	fmt.Println("HandlerRecipeInfo")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -75,6 +74,8 @@ func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
 	if res.Status != Const.STATUS_SUCCESS {
 		fmt.Println(res.Message)
 	} else {
+		fmt.Println("レスポンス")
+		fmt.Println(model)
 		res, err := json.Marshal(Response{0, model})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -119,10 +120,23 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 	// レシピ保存処理
 	res, recipeId = Module.SaveRecipe(model)
 
+	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Println("エラーが発生しました")
+		fmt.Println(res.Message)
+		res, err := json.Marshal(Response{res.Status, model})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(res)
+	}
+
 	//アップロードされたファイル名を取得
 	fmt.Println("CALL:FileUpload")
 	fmt.Println(file)
-	Module.FileUpload(file, recipeId)
+	if file != nil {
+		Module.FileUpload(file, recipeId)
+	}
 
 	if res.Status != Const.STATUS_SUCCESS {
 		fmt.Println("エラーが発生しました")
@@ -195,7 +209,7 @@ func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
 
 // レシピ入力画面
 func HandlerRecipeMake(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("call")
+	fmt.Println("HandlerRecipeMake")
 	// w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -244,7 +258,7 @@ const (
 
 // 画像保存
 func HandlerOpenImage(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("saveImage")
+	fmt.Println("HandlerOpenImage")
 	// w.Header().Set("Content-Type", "multipart/form-data")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -253,15 +267,26 @@ func HandlerOpenImage(w http.ResponseWriter, r *http.Request) {
 	var Path = ""
 
 	sub := strings.TrimPrefix(r.URL.Path, "/image")
+	fmt.Println("A")
 	_, id := filepath.Split(sub)
 	if id != "" {
 		Path += "image/" + id
+	} else {
+		Path += "image/noImage.jpg"
 	}
 
+	fmt.Println("B")
+	fmt.Println(Path)
 	img, err := os.Open(Path)
+	fmt.Println("C")
 	if err != nil {
-		log.Fatal(err) // perhaps handle this nicer
+		fmt.Println(err)
+		img, err = os.Open("image/noImage.jpg")
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
+	fmt.Println("D")
 	defer img.Close()
 	w.Header().Set("Content-Type", "image/jpeg") // <-- set the content-type header
 	io.Copy(w, img)
