@@ -77,7 +77,7 @@ func connectionDB(conf *config) (*gorm.DB, error) {
 }
 
 /*
-SELECTを実行する
+レシピ情報のSELECTを実行する(レシピIDによる検索)
 */
 func exeSelRecipes(db *gorm.DB, recipeId string) (Result, RecipeModel.Models) {
 
@@ -125,7 +125,62 @@ func exeSelRecipes(db *gorm.DB, recipeId string) (Result, RecipeModel.Models) {
 }
 
 /*
-SELECTを実行する
+新着レシピ情報のSELECTを実行する
+*/
+func exeSelNewRecipe(db *gorm.DB) (Result, RecipeModel.Models) {
+	fmt.Println("START:exeSelNewRecipe")
+	model := RecipeModel.Models{}
+
+	defer func() {
+		// SQL実行時エラーの場合
+		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
+			db.Close()
+		}
+	}()
+
+	// SQL実行
+	// レシピ情報を検索
+	dbResult := db.Order("updated_at desc").Find(&model.Recipes)
+	if dbResult.Error != nil {
+		// DBエラーの場合
+		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, model
+	}
+
+	fmt.Println("END:exeSelNewRecipe")
+	return Result{}, model
+}
+
+/*
+材料情報のSELECTを実行する
+*/
+func exeCountIngredients(db *gorm.DB, where RecipeModel.Ingredients) (Result, int) {
+	fmt.Println("START:exeCountIngredients")
+
+	defer func() {
+		// SQL実行時エラーの場合
+		if errResult := recover(); errResult != nil {
+			fmt.Println("DBクローズ")
+			db.Rollback()
+			db.Close()
+		}
+	}()
+
+	// SQL実行
+	var count int
+	dbResult := db.Model(&Ingredients{}).Where(where).Count(&count)
+	if dbResult.Error != nil {
+		// DBエラーの場合
+		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, -1
+	}
+
+	fmt.Println("END:exeCountIngredients")
+	return Result{}, count
+}
+
+/*
+SELECTを実行する(文字列による検索)
 */
 func exeSelRecipeByStr(db *gorm.DB, where string, key string) (Result, RecipeModel.Models) {
 	fmt.Println("START:exeSelRecipeByStr")
@@ -150,33 +205,6 @@ func exeSelRecipeByStr(db *gorm.DB, where string, key string) (Result, RecipeMod
 
 	fmt.Println("END:exeSelRecipeByStr")
 	return Result{}, model
-}
-
-/*
-SELECTを実行する
-*/
-func exeCountIngredients(db *gorm.DB, where RecipeModel.Ingredients) (Result, int) {
-	fmt.Println("START:exeCountIngredients")
-
-	defer func() {
-		// SQL実行時エラーの場合
-		if errResult := recover(); errResult != nil {
-			fmt.Println("DBクローズ")
-			db.Rollback()
-			db.Close()
-		}
-	}()
-
-	// SQL実行
-	var count int
-	dbResult := db.Model(&Ingredients{}).Where(where).Count(&count)
-	if dbResult.Error != nil {
-		// DBエラーの場合
-		return Result{Const.STATUS_DB_ERROR, "", dbResult.Error}, -1
-	}
-
-	fmt.Println("END:exeCountIngredients")
-	return Result{}, count
 }
 
 /*
@@ -519,6 +547,7 @@ func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
 
 			}
 		}
+		db.Close()
 	}()
 
 	res, model = exeSelRecipes(db, model.Recipes[0].RecipeId)
@@ -530,7 +559,7 @@ func OpenRecipeInfo(model RecipeModel.Models) (Result, RecipeModel.Models) {
 /*
 レシピの検索をする
 */
-func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
+func SearchRecipe(keyWord []RecipeModel.Data, isHome bool) (Result, RecipeModel.Models) {
 	fmt.Println("START:SearchRecipe")
 
 	var res = Result{}
@@ -564,6 +593,7 @@ func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
 
 			}
 		}
+		db.Close()
 	}()
 
 	fmt.Println("検索開始")
@@ -575,15 +605,155 @@ func SearchRecipe(keyWord []RecipeModel.Data) (Result, RecipeModel.Models) {
 		key := "%" + v.Word + "%"
 		// レシピ検索
 		var m = RecipeModel.Models{}
+
 		res, m = exeSelRecipeByStr(db, where, key)
 		for n, r := range m.Recipes {
+
 			fmt.Println(n, r)
 			arr = append(arr, r)
+			if isHome && n == 3 {
+				break
+			}
 		}
 	}
 
 	model.Recipes = arr
 	fmt.Println("END:SearchRecipe")
+
+	return res, model
+}
+
+/*
+ホーム画面のレシピの検索をする
+*/
+func SearchHomeRecipe(keyWord []RecipeModel.Data, isHome bool) (Result, RecipeModel.HomeModels) {
+	fmt.Println("START:SearchHomeRecipe")
+
+	var res = Result{}
+	// model := RecipeModel.Models{}
+	hModel := RecipeModel.HomeModels{}
+
+	// DB接続情報取得
+	conf, err := loadConfig()
+	if err != nil {
+		return Result{Const.STATUS_FILE_LOAD_ERROR, "", err}, hModel
+	}
+
+	// DBオープン
+	db, err := connectionDB(conf)
+	// DB接続に失敗した場合
+	if err != nil {
+		return Result{Const.STATUS_DB_ERROR, "", err}, hModel
+	}
+
+	defer func() {
+
+		// エラーが発生した場合
+		if err := recover(); err != nil {
+			res = err.(Result)
+			// エラーメッセージのセット
+			switch res.Status {
+			case Const.STATUS_FILE_LOAD_ERROR:
+				res.Message = Const.MSG_FILE_LOAD_ERROR
+			case Const.STATUS_DB_ERROR:
+				res.Message = Const.MSG_DB_ERROR
+			default:
+
+			}
+		}
+		db.Close()
+	}()
+
+	fmt.Println("検索開始")
+	// var arr []RecipeModel.Recipes
+	for i, v := range keyWord {
+		fmt.Println(i, v)
+		fmt.Println(v)
+		where := Const.COL_TITLE + " LIKE ?"
+		key := "%" + v.Word + "%"
+		// レシピ検索
+		var m = RecipeModel.Models{}
+
+		res, m = exeSelRecipeByStr(db, where, key)
+		// var hm = RecipeModel.HomeModels{}
+		// hm.RankModels.Rank1 = append(hm.RankModels.Rank1, m.Recipes[0])
+		// var a := append(hm.Recipes.RankModels, m.Recipes)
+		for n, r := range m.Recipes {
+
+			fmt.Println(n, r)
+			if i == 0 {
+				hModel.RankModels.Rank1 = append(hModel.RankModels.Rank1, r)
+			} else if i == 1 {
+				hModel.RankModels.Rank2 = append(hModel.RankModels.Rank2, r)
+			} else if i == 2 {
+				hModel.RankModels.Rank3 = append(hModel.RankModels.Rank3, r)
+			}
+			// arr = append(arr, r)
+			if isHome && n == 3 {
+				break
+			}
+		}
+	}
+
+	// model.Recipes = arr
+	fmt.Println("END:SearchHomeRecipe")
+
+	return res, hModel
+}
+
+/*
+新着レシピの検索をする
+*/
+func SearchNewRecipe() (Result, RecipeModel.Models) {
+	fmt.Println("START:SearchNewRecipe")
+
+	var res = Result{}
+	model := RecipeModel.Models{}
+
+	// DB接続情報取得
+	conf, err := loadConfig()
+	if err != nil {
+		return Result{Const.STATUS_FILE_LOAD_ERROR, "", err}, model
+	}
+
+	// DBオープン
+	db, err := connectionDB(conf)
+	// DB接続に失敗した場合
+	if err != nil {
+		return Result{Const.STATUS_DB_ERROR, "", err}, model
+	}
+
+	defer func() {
+
+		// エラーが発生した場合
+		if err := recover(); err != nil {
+			res = err.(Result)
+			// エラーメッセージのセット
+			switch res.Status {
+			case Const.STATUS_FILE_LOAD_ERROR:
+				res.Message = Const.MSG_FILE_LOAD_ERROR
+			case Const.STATUS_DB_ERROR:
+				res.Message = Const.MSG_DB_ERROR
+			default:
+
+			}
+		}
+		db.Close()
+	}()
+
+	fmt.Println("検索開始")
+	var arr []RecipeModel.Recipes
+	// レシピ検索
+	var m = RecipeModel.Models{}
+	res, m = exeSelNewRecipe(db)
+	for n, r := range m.Recipes {
+
+		fmt.Println(n, r)
+		arr = append(arr, r)
+	}
+
+	model.Recipes = arr
+	fmt.Println("END:SearchNewRecipe")
 
 	return res, model
 }
@@ -625,6 +795,7 @@ func CheckExistRecipe(model *RecipeModel.Models) Result {
 
 			}
 		}
+		db.Close()
 	}()
 
 	// レシピ検索
@@ -676,6 +847,7 @@ func getCountIngredients(model RecipeModel.Models) (Result, int) {
 
 			}
 		}
+		db.Close()
 	}()
 
 	// レシピ検索
@@ -722,6 +894,7 @@ func getCountInstructions(model RecipeModel.Models) (Result, int) {
 
 			}
 		}
+		db.Close()
 	}()
 
 	// レシピ検索
@@ -982,6 +1155,7 @@ func MakeRecipe(model RecipeModel.Models) (RecipeModel.Models, Result) {
 
 			}
 		}
+		db.Close()
 	}()
 
 	fmt.Println("レシピIDを生成")

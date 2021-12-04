@@ -13,8 +13,9 @@ const (
 	MSG_DB_ERROR         = "DBエラー"
 	MSG_UNEXPECTED_ERROR = "何らかのエラー"
 	// リクエストコード
-	REQ_SAVE_RECIPE   = "saveRecipe"
-	REQ_SEARCH_RECIPE = "searchRecipe"
+	REQ_SAVE_RECIPE       = "saveRecipe"
+	REQ_SEARCH_RECIPE     = "searchRecipe"
+	REQ_SEARCH_NEW_RECIPE = "searchNewRecipe"
 	// カラム名
 	COL_TITLE = "title"
 )

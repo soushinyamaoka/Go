@@ -40,6 +40,17 @@ type Models struct {
 	Instructions []Instructions
 }
 
+type HomeModels struct {
+	Status     int
+	RankModels RankModels
+}
+
+type RankModels struct {
+	Rank1 []Recipes
+	Rank2 []Recipes
+	Rank3 []Recipes
+}
+
 func GetMaterial() []Ingredients {
 
 	// 定義その1＆要素追加

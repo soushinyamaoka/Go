@@ -30,6 +30,11 @@ type Response struct {
 	Data   RecipeModel.Models
 }
 
+type HomeResponse struct {
+	Status int
+	Data   RecipeModel.HomeModels
+}
+
 type EResponse struct {
 	Status int
 }
@@ -43,7 +48,6 @@ func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
 	body, e := ioutil.ReadAll(r.Body)
-	fmt.Printf("%#v\n", string(body))
 	if e != nil {
 		fmt.Printf("ERROR1")
 		fmt.Println(e.Error())
@@ -58,24 +62,17 @@ func HandlerRecipeInfo(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%#v\n", string(body))
 		return
 	}
-
-	fmt.Println("OK")
 	model := RecipeModel.Models{}
 	var res = Module.Result{}
-
-	fmt.Println(req.Data.Recipes[0].RecipeId)
 	model = req.Data
-	fmt.Println("OK2")
 
 	// レシピ検索処理
-	fmt.Println(model)
 	res, model = Module.OpenRecipeInfo(model)
 
 	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Printf("%#v\n", string(body))
 		fmt.Println(res.Message)
 	} else {
-		fmt.Println("レスポンス")
-		fmt.Println(model)
 		res, err := json.Marshal(Response{0, model})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -100,8 +97,6 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
 	req := Request{}
-	fmt.Println(r)
-	fmt.Println(req)
 
 	var recipeId = ""
 	file, _, err := r.FormFile("image")
@@ -116,7 +111,6 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 	var res = Module.Result{}
 	model.Recipes = req.Data.Recipes
 
-	fmt.Println("CALL:SaveRecipe")
 	// レシピ保存処理
 	res, recipeId = Module.SaveRecipe(model)
 
@@ -132,8 +126,6 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//アップロードされたファイル名を取得
-	fmt.Println("CALL:FileUpload")
-	fmt.Println(file)
 	if file != nil {
 		Module.FileUpload(file, recipeId)
 	}
@@ -148,13 +140,14 @@ func HandlerRecipeSave(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		fmt.Println(res)
 		w.Write(res)
 	}
 }
 
 // レシピ入力画面
-func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("call: HandlerOpenHome")
+func HandlerSearchRecipe(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("call: HandlerSearchRecipe")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -168,8 +161,6 @@ func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := HomeRequest{}
-	fmt.Println("body")
-	fmt.Println(body)
 
 	e = json.Unmarshal(body, &req)
 	if e != nil {
@@ -181,20 +172,21 @@ func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
 
 	var model = RecipeModel.Models{}
 	var res = Module.Result{}
-	keyModel := req.Data
 
-	// レシピ保存処理
-	// var sample []string
-	// sample = append(sample, "ラーメン")
-	// sample = append(sample, "うどん")
-	// string a := ["a", "b"]
-	fmt.Println(keyModel)
-	res, model = Module.SearchRecipe(keyModel)
-	// fmt.Println(a[0])
-	// model, res = Module.SearchHome(model)
+	if req.ReqCode == Const.REQ_SEARCH_NEW_RECIPE {
+		// 新着レシピの場合
+		res, model = Module.SearchNewRecipe()
+
+	} else {
+		// キーワード検索の場合
+		keyModel := req.Data
+		res, model = Module.SearchRecipe(keyModel, true)
+	}
 
 	if res.Status != Const.STATUS_SUCCESS {
 		fmt.Println("エラーが発生しました")
+		fmt.Println("body")
+		fmt.Println(body)
 		fmt.Println(res.Message)
 	} else {
 		fmt.Println("正常終了")
@@ -208,35 +200,65 @@ func HandlerOpenHome(w http.ResponseWriter, r *http.Request) {
 }
 
 // レシピ入力画面
-func HandlerRecipeMake(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("HandlerRecipeMake")
-	// w.Header().Set("Content-Type", "application/json")
+func HandlerSearchHomeRecipe(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("call: HandlerSearchRecipe")
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 
-	// body, e := ioutil.ReadAll(r.Body)
-	// fmt.Printf("%#v\n", string(body))
-	// if e != nil {
-	// 	fmt.Printf("ERROR1")
-	// 	fmt.Println(e.Error())
-	// 	return
-	// }
+	body, e := ioutil.ReadAll(r.Body)
+	fmt.Printf("%#v\n", string(body))
+	if e != nil {
+		fmt.Printf("ERROR1")
+		fmt.Println(e.Error())
+		return
+	}
+	req := HomeRequest{}
+
+	e = json.Unmarshal(body, &req)
+	if e != nil {
+		fmt.Printf("%#v\n", "ERROR2")
+		fmt.Printf("%#v\n", e.Error())
+		fmt.Printf("%#v\n", string(body))
+		return
+	}
+
+	var model = RecipeModel.HomeModels{}
+	var res = Module.Result{}
+
+	keyModel := req.Data
+	res, model = Module.SearchHomeRecipe(keyModel, true)
+
+	if res.Status != Const.STATUS_SUCCESS {
+		fmt.Println("エラーが発生しました")
+		fmt.Println(res.Message)
+		fmt.Println("body")
+		fmt.Println(body)
+	} else {
+		fmt.Println("正常終了")
+		res, err := json.Marshal(HomeResponse{0, model})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(res)
+	}
+}
+
+// レシピ入力画面
+func HandlerRecipeMake(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HandlerRecipeMake")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
 	req := Request{}
 	body := r.FormValue("Data")
 	json.Unmarshal([]byte(body), &req)
 
-	// e = json.Unmarshal(body, &req)
-	// if e != nil {
-	// 	fmt.Printf("%#v\n", "ERROR2")
-	// 	fmt.Printf("%#v\n", e.Error())
-	// 	fmt.Printf("%#v\n", string(body))
-	// 	return
-	// }
-
 	var res = Module.Result{}
 	var model = RecipeModel.Models{}
-	fmt.Println("CALL:SaveRecipe")
 	// レシピ作成前処理
 	model, res = Module.MakeRecipe(model)
 
@@ -267,18 +289,13 @@ func HandlerOpenImage(w http.ResponseWriter, r *http.Request) {
 	var Path = ""
 
 	sub := strings.TrimPrefix(r.URL.Path, "/image")
-	fmt.Println("A")
 	_, id := filepath.Split(sub)
 	if id != "" {
 		Path += "image/" + id
 	} else {
 		Path += "image/noImage.jpg"
 	}
-
-	fmt.Println("B")
-	fmt.Println(Path)
 	img, err := os.Open(Path)
-	fmt.Println("C")
 	if err != nil {
 		fmt.Println(err)
 		img, err = os.Open("image/noImage.jpg")
@@ -286,27 +303,28 @@ func HandlerOpenImage(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 	}
-	fmt.Println("D")
 	defer img.Close()
 	w.Header().Set("Content-Type", "image/jpeg") // <-- set the content-type header
 	io.Copy(w, img)
 
-	// res, err := json.Marshal(Response{0, RecipeModel.Models{}})
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-	// w.Write(res)
 }
 
 func main() {
 	fmt.Println("main")
 
 	// "user-form"へのリクエストを関数で処理する
+	// レシピ情報取得時
 	http.HandleFunc("/recipeInfo", HandlerRecipeInfo)
+	// レシピ保存時
 	http.HandleFunc("/saveRecipe", HandlerRecipeSave)
-	http.HandleFunc("/makeRecipe", HandlerRecipeMake)
-	http.HandleFunc("/openHome", HandlerOpenHome)
+	// http.HandleFunc("/makeRecipe", HandlerRecipeMake)
+	// ホーム画面表示時
+	http.HandleFunc("/openHome", HandlerSearchHomeRecipe)
+	// レシピ検索時
+	http.HandleFunc("/searchRecipe", HandlerSearchRecipe)
+	// 新着レシピ検索
+	http.HandleFunc("/searchNewRecipe", HandlerSearchRecipe)
+	// 画像取得
 	http.HandleFunc("/image/", HandlerOpenImage)
 	fmt.Println("a")
 
