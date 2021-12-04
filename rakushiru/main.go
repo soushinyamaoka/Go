@@ -330,7 +330,10 @@ func main() {
 
 	fmt.Println("b")
 
+	// buildフォルダを公開
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("web"))))
+
 	// サーバーを起動
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":1208", nil)
 	fmt.Println("c")
 }
