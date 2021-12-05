@@ -1,8 +1,0 @@
-{
-    "dbDriver": "mysql",
-    "dbUserName": "adminhost",
-    "dbUserPassword": "rakushirudb",
-    "dbHost": "localhost",
-    "dbPort": "3306",
-    "dbName": "raku"
-}

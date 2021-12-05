@@ -60,6 +60,7 @@ DBオープンする
 */
 func connectionDB(conf *config) (*gorm.DB, error) {
 
+	fmt.Println("START:connectionDB")
 	// "dsn": "adminhost:rakushirudb@tcp(localhost:3306)/raku"
 	dbConnectInfo := fmt.Sprintf(
 		`%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local`,
@@ -72,6 +73,7 @@ func connectionDB(conf *config) (*gorm.DB, error) {
 
 	// DB接続
 	db, err := gorm.Open(conf.DbDriver, dbConnectInfo)
+	fmt.Println("END:connectionDB")
 
 	return db, err
 }
