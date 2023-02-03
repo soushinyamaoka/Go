@@ -1,0 +1,7 @@
+【実行】
+go run main.go
+
+【テストリクエスト】
+curl localhost:1208/Home
+
+【】

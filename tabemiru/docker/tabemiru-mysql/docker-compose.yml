@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: .               # Dockerfileへのパス指定
+      dockerfile: Dockerfile   # Dockerfileへのパス指定
+    image: mysql:8
+    container_name: dabemiru-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      TZ: ${TZ}
+    ports:
+        - ${DB_PORT}:3306
+    # コンテナを停止する度にDB情報を破棄したい場合、「tmpfs」をコメント解除
+    # tmpfs:
+    #     - /var/lib/mysql
+    volumes:
+        - db-store:/var/lib/mysql
+        - ./logs:/var/log/mysql
+        - ./script:/docker-entrypoint-initdb.d 
+volumes:
+  db-store:
