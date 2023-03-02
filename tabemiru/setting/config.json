@@ -1,0 +1,38 @@
+{
+    "serveInfo": {
+        "protocol": "http://",
+        "host": "localhost",
+        "port": "3306",
+        "recipeInfo": "recipeInfo",
+        "searchRecipe": "searchRecipe",
+        "searchNewRecipe": "searchNewRecipe",
+        "saveRecipe": "saveRecipe",
+        "saveImage": "saveImage",
+        "openHome": "openHome",
+        "openImage": "image",
+        "logLevel": "DEBUG"
+    },
+    "dbInfo": {
+        "dbDriver": "mysql",
+        "dbUserName": "admin",
+        "dbUserPassword": "tabemiru1230",
+        "dbHost": "localhost",
+        "dbPort": "3306",
+        "dbName": "tabemirudb"
+    },
+    "siteInfo": {
+        "nav": [{
+                "name": "人気",
+                "link": "Home"
+            },
+            {
+                "name": "カテゴリ",
+                "link": "Home"
+            },
+            {
+                "name": "季節",
+                "link": "Home"
+            }
+        ]
+    }
+}
