@@ -526,7 +526,7 @@ func NotFoundRecipeInfo(w http.ResponseWriter, r *http.Request) {
 	pos := strings.LastIndex(key, ".")
 	if pos >= 0 {
 		str := key[pos:]
-		if (len(str) > 0) && (str != ".js") && (str != ".css") && (str != ".map") {
+		if (len(str) > 0) && (str != ".js") && (str != ".css") && (str != ".map") && (str != ".json") {
 			path += "/" + key
 		}
 	} else {
@@ -564,7 +564,7 @@ func main() {
 	// buildフォルダを公開
 	// StripPrefixの第一引数がURL側、HandleがWEBのルート
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("web"))))
-	http.Handle("/MakeRecipes", http.StripPrefix("/", http.FileServer(http.Dir("web"))))
+	http.Handle("/MakeRecipes/", http.StripPrefix("/MakeRecipes/", http.FileServer(http.Dir("web"))))
 	// http.Handle("/dummyForm", http.StripPrefix("/", http.FileServer(http.Dir("web"))))
 	// http.Handle("/RecipeList/", http.StripPrefix("/RecipeList/", http.FileServer(http.Dir("web"))))
 
